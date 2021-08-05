@@ -1,31 +1,46 @@
 #!/usr/bin/env python
 
-import rospy
-import roslaunch
 import time
 import sys
+import roslaunch
 
-# print(sys.argv[1])
+# 0 mapping
+# 1 auto
+# 2 sman
 
-uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-roslaunch.configure_logging(uuid)
+def launch(launch1, launch2):
+    launch1.start()
+    time.sleep(5)
+    launch2.start()
+    try:
+        launch1.spin()
+        launch2.spin()
+    finally:
+        launch1.shutdown()
+        launch2.shutdown()
 
-robot_ = roslaunch.rlutil.resolve_launch_arguments(['navigator_bringup', 'robot_standalone.launch'])
-slam_ = roslaunch.rlutil.resolve_launch_arguments(['navigator_slam', 'mapping.launch'])
-auto_ = roslaunch.rlutil.resolve_launch_arguments(['navigator_navigation', 'auto.launch'])
-sman_ = roslaunch.rlutil.resolve_launch_arguments(['navigator_navigation', 'sman.launch'])
+if __name__ == '__main__':
+    uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+    roslaunch.configure_logging(uuid)
 
-robot = roslaunch.parent.ROSLaunchParent(uuid, robot_)
-slam = roslaunch.parent.ROSLaunchParent(uuid, slam_)
-auto = roslaunch.parent.ROSLaunchParent(uuid, auto_)
-sman = roslaunch.parent.ROSLaunchParent(uuid, sman_)
+    launch_file1 = roslaunch.rlutil.resolve_launch_arguments(['navigator_bringup', 'robot_standalone.launch'])
+    launch_file2 = roslaunch.rlutil.resolve_launch_arguments(['navigator_slam', 'slam.launch'])
+    launch_file3 = roslaunch.rlutil.resolve_launch_arguments(['navigator_navigation', 'auto.launch'])
+    launch_file4 = roslaunch.rlutil.resolve_launch_arguments(['navigator_navigation', 'sman.launch'])
 
-robot.start()
+    launch_parent1 = roslaunch.parent.ROSLaunchParent(uuid, launch_file1)
+    launch_parent2 = roslaunch.parent.ROSLaunchParent(uuid, launch_file2)
+    launch_parent3 = roslaunch.parent.ROSLaunchParent(uuid, launch_file3)
+    launch_parent4 = roslaunch.parent.ROSLaunchParent(uuid, launch_file4)
 
-try:
-    robot.spin()
+    if sys.argv[1] == '0':
+        launch(launch_parent1, launch_parent2)
 
-finally:
-    robot.shutdown()
+    elif sys.argv[1] == '1':
+        launch(launch_parent1, launch_parent3)
+
+    elif sys.argv[1] == '2':
+        launch(launch_parent1, launch_parent4)
+
 
 

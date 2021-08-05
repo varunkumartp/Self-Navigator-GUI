@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import rospy
-from std_msgs.msg import Int16, Bool
+from std_msgs.msg import Int16
 
 #############################################################
-class gui_to_motors():
+class teleop():
 #############################################################
     
     #############################################################

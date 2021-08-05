@@ -1,16 +1,22 @@
 #!/usr/bin/env python
 
-
-from gui_to_motors import gui_to_motors as teleop
-import PyQt5.QtWidgets as qt
+import os
+import rviz
+import signal
+import rospkg
+import subprocess
 import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
-import roslib; roslib.load_manifest('rviz_python_tutorial')
-import rospkg
-import rviz
+import PyQt5.QtWidgets as qt
+from teleop import teleop
 
-class MainWindow(qt.QMainWindow):
+#############################################################
+class LoginPage(qt.QMainWindow):
+#############################################################
+
+    #############################################################
     def __init__(self):
+    #############################################################
         super().__init__()
         widget.setWindowTitle('Login Page')
     
@@ -64,24 +70,28 @@ class MainWindow(qt.QMainWindow):
         self.wlabel.setHidden(True)
 
         # Exit button
-        self.exit = qt.QPushButton('Exit', self, clicked = lambda: self.quit())
-        self.exit.setStyleSheet('background-color: #ffffff')
+        self.exit = qt.QPushButton('Exit', self, clicked = lambda: app.quit())
+        self.exit.setStyleSheet('background-color: #ff0000')
         self.exit.move(core.QPoint(int(w/2),600)-self.exit.frameGeometry().center())
 
+    #############################################################
     def Enter(self):
+    #############################################################
         if self.username.text() == '' and self.password.text() == '':
             self.wlabel.setHidden(True)
             widget.setCurrentIndex(widget.currentIndex()+1)
             widget.setWindowTitle('Main Menu')
         else:
             self.wlabel.setHidden(False)
-            
-    def quit(self):
-        app.quit()
 
 
-class second(qt.QMainWindow):
+#############################################################
+class MainMenu(qt.QMainWindow):
+#############################################################
+
+    #############################################################
     def __init__(self):
+    #############################################################
         super().__init__()
 
         # Main Window Title
@@ -105,77 +115,242 @@ class second(qt.QMainWindow):
         self.auto.move(core.QPoint(int(w/2),325)-self.auto.frameGeometry().center())
 
         # sman Button
-        self.sman = qt.QPushButton('Simultaneous Mapping and Autonomous Navigation', self, clicked = lambda: self.viz('Simultaneous Mapping and Autonomous Navigation', 1))
+        self.sman = qt.QPushButton('Simultaneous Mapping and Autonomous Navigation', self, clicked = lambda: self.viz('Simultaneous Mapping and Autonomous Navigation', 3))
         self.sman.setStyleSheet('background-color: #ffffff')
         self.sman.setFixedSize(350,30)
         self.sman.move(core.QPoint(int(w/2),425)-self.sman.frameGeometry().center())
 
+    #############################################################
+    def keyReleaseEvent(self, event):
+    #############################################################
+        if event.key() == 16777219:
+            self.viz('Login Page', -1)
+    
+    #############################################################
     def viz(self, title, index):
+    #############################################################
         widget.setCurrentIndex(widget.currentIndex()+index)
         widget.setWindowTitle(title)
         
-    def keyReleaseEvent(self, event):
-        if event.key() == 16777219:
-            self.viz('Login Page', -1)
-
-
+    
+#############################################################
 class SLAM(qt.QWidget):
+#############################################################
+
+    #############################################################
     def __init__(self):
+    #############################################################
         super().__init__()
+        self.setStyleSheet('background-color: #353535')
+
+        self.mode = False
         self.stat = ' '
         self.tele = teleop()
-        self.setStyleSheet('background-color: #414141')
+        
+        # start button
+        self.start = qt.QPushButton('Start', self, clicked = lambda: self.start_())
+        self.start.setStyleSheet('background-color: #00ff00')
+        self.start.setFixedSize(100,30)
 
         # save button
         self.save = qt.QPushButton('Save Map', self, clicked = lambda: self.save_())
-        self.save.setStyleSheet('background-color: #00ff00')
+        self.save.setStyleSheet('background-color: #0000ff')
         self.save.setFixedSize(100,30)
+        self.save.hide()
 
         # final layout
         layout = qt.QVBoxLayout()
         layout.addWidget(Myviz().getviz())
         layout.addWidget(self.save, alignment=core.Qt.AlignCenter | core.Qt.AlignVCenter)
+        layout.addWidget(self.start, alignment=core.Qt.AlignCenter | core.Qt.AlignVCenter)
         Widget = qt.QWidget(self)
         Widget.setFixedSize(w, h)
         Widget.move(core.QPoint(int(w/2),325)-Widget.frameGeometry().center())
         Widget.setLayout(layout)
 
+    #############################################################
+    def start_(self):
+    #############################################################
+        self.process = subprocess.Popen(['python', rospack.get_path('navigator_gui')+'/scripts/python_roslaunch.py','0'])
+        self.start.hide()
+        self.save.show()
+        self.mode = True
+        
+    #############################################################
+    def save_(self):
+    #############################################################
+        try:
+            self.process.send_signal(signal.SIGTERM)
+            self.process.wait()
+            self.process.kill()
+            self.process.wait()
+            os.system('rosrun map_server map_saver -f '+rospack.get_path('navigator_gui')+'/maps/mymap')
+            self.mode = False
+        finally:
+            self.process.terminate()
+            self.save.hide()
+            self.start.show()
+        
+    #############################################################
     def keyPressEvent(self, event):
+    #############################################################
         print(event.key())
-        if event.key() != self.stat:
+        if event.key() != self.stat and self.mode:
             self.stat = event.key()
             self.tele.getcommands(event.key())
             
+    #############################################################
     def keyReleaseEvent(self, event):
-        if event.key() and not event.isAutoRepeat():
+    #############################################################
+        if event.key() and not event.isAutoRepeat() and self.mode:
             self.stat = ' '
             self.tele.getcommands(' ')
         if event.key() == 16777219:
             widget.setCurrentIndex(widget.currentIndex()-1)
             widget.setWindowTitle('Main Menu')
 
-    def save_(self):
-        print('map saved')
+#############################################################
+class SMAN(qt.QWidget):
+#############################################################
 
-class AUTO(qt.QWidget):
+    #############################################################
     def __init__(self):
+    #############################################################
         super().__init__()
+        self.setStyleSheet('background-color: #353535')
+
+        self.mode = False
+        self.stat = ' '
+        self.tele = teleop()
+        
+        # start button
+        self.start = qt.QPushButton('Start', self, clicked = lambda: self.start_())
+        self.start.setStyleSheet('background-color: #00ff00')
+        self.start.setFixedSize(100,30)
+
+        # save button
+        self.save = qt.QPushButton('Save Map', self, clicked = lambda: self.save_())
+        self.save.setStyleSheet('background-color: #0000ff')
+        self.save.setFixedSize(100,30)
+        self.save.hide()
 
         # final layout
         layout = qt.QVBoxLayout()
         layout.addWidget(Myviz().getviz())
+        layout.addWidget(self.save, alignment=core.Qt.AlignCenter | core.Qt.AlignVCenter)
+        layout.addWidget(self.start, alignment=core.Qt.AlignCenter | core.Qt.AlignVCenter)
         Widget = qt.QWidget(self)
         Widget.setFixedSize(w, h)
         Widget.move(core.QPoint(int(w/2),325)-Widget.frameGeometry().center())
         Widget.setLayout(layout)
 
+    #############################################################
+    def start_(self):
+    #############################################################
+        self.process = subprocess.Popen(['python', rospack.get_path('navigator_gui')+'/scripts/python_roslaunch.py','2'])
+        self.start.hide()
+        self.save.show()
+        self.mode = True
+        
+    #############################################################
+    def save_(self):
+    #############################################################
+        try:
+            self.process.send_signal(signal.SIGTERM)
+            self.process.wait()
+            self.process.kill()
+            self.process.wait()
+            os.system('rosrun map_server map_saver -f '+rospack.get_path('navigator_gui')+'/maps/mymap')
+            self.mode = False
+        finally:
+            self.process.terminate()
+            self.save.hide()
+            self.start.show()
+        
+    #############################################################
+    def keyPressEvent(self, event):
+    #############################################################
+        print(event.key())
+        if event.key() != self.stat and self.mode:
+            self.stat = event.key()
+            self.tele.getcommands(event.key())
+            
+    #############################################################
     def keyReleaseEvent(self, event):
+    #############################################################
+        if event.key() and not event.isAutoRepeat() and self.mode:
+            self.stat = ' '
+            self.tele.getcommands(' ')
+        if event.key() == 16777219:
+            widget.setCurrentIndex(widget.currentIndex()-3)
+            widget.setWindowTitle('Main Menu')
+
+
+#############################################################
+class AUTO(qt.QWidget):
+#############################################################
+
+    #############################################################
+    def __init__(self):
+    #############################################################
+        super().__init__()
+        self.setStyleSheet('background-color: #353535')
+
+        # start button
+        self.start = qt.QPushButton('Start', self, clicked = lambda: self.start_())
+        self.start.setStyleSheet('background-color: #00ff00')
+        self.start.setFixedSize(100,30)
+
+        # start button
+        self.stop = qt.QPushButton('Stop', self, clicked = lambda: self.stop_())
+        self.stop.setStyleSheet('background-color: #ff0000')
+        self.stop.setFixedSize(100,30)
+        self.stop.hide()
+        
+        # final layout
+        layout = qt.QVBoxLayout()
+        layout.addWidget(Myviz().getviz())
+        layout.addWidget(self.stop, alignment=core.Qt.AlignCenter | core.Qt.AlignVCenter)
+        layout.addWidget(self.start, alignment=core.Qt.AlignCenter | core.Qt.AlignVCenter)
+        Widget = qt.QWidget(self)
+        Widget.setFixedSize(w, h)
+        Widget.move(core.QPoint(int(w/2),325)-Widget.frameGeometry().center())
+        Widget.setLayout(layout)
+
+    #############################################################
+    def keyReleaseEvent(self, event):
+    #############################################################
         if event.key() == 16777219:
             widget.setCurrentIndex(widget.currentIndex()-2)
             widget.setWindowTitle('Main Menu')
+    
+    #############################################################
+    def start_(self):
+    #############################################################
+        # self.process = subprocess.Popen(['python', rospack.get_path('navigator_gui')+'/scripts/python_roslaunch.py','1'])
+        self.start.hide()
+        self.stop.show()
 
+    #############################################################
+    def stop_(self):
+    #############################################################
+        try:
+            self.process.send_signal(signal.SIGTERM)
+            self.process.wait()
+            self.process.kill()
+            self.process.wait()
+        finally:
+            self.process.terminate()
+        self.stop.hide()
+        self.start.show()
+    
+#############################################################
 class Myviz():
+#############################################################
+
+    #############################################################
     def __init__(self):
+    #############################################################
         reader = rviz.bindings.YamlConfigReader()
         config = rviz.bindings.Config()
         reader.readFile( config, rospack.get_path('navigator_gui')+"/rviz/robot_mapping.rviz" )
@@ -186,32 +361,35 @@ class Myviz():
         self.frame.setStatusBar( None )
         self.frame.setMenuBar(None)
     
+    #############################################################
     def getviz(self):
+    #############################################################
         return self.frame
-        
 
+#############################################################
+#############################################################
 if __name__ == '__main__':     
-    w = 1200
-    h = 650
+    w, h = 1200, 650
     rospack = rospkg.RosPack()
     app = qt.QApplication([])
     widget = qt.QStackedWidget()
 
     widget.setFixedSize(w, h)
-    widget.setStyleSheet('background-color: #414141')
+    widget.setStyleSheet('background-color: #353535')
     widget.move(qt.QDesktopWidget().availableGeometry().center()-widget.frameGeometry().center())
     
 
-    login_page = MainWindow()
-    main_menu = second()
+    login_page = LoginPage()
+    main_menu = MainMenu()
     slam_menu = SLAM()
     auto_menu = AUTO()
+    sman_menu = SMAN()
 
     widget.addWidget(login_page)
     widget.addWidget(main_menu)
     widget.addWidget(slam_menu)
     widget.addWidget(auto_menu)
-
+    widget.addWidget(sman_menu)
     widget.show()
 
     app.exec_()     
