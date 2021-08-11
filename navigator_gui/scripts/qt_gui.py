@@ -46,11 +46,13 @@ class LoginPage(qt.QMainWindow):
         
         # Username field
         self.username = qt.QLineEdit(self)
+        self.username.setText('Self-Navigating Bot')
         self.username.setStyleSheet('background-color: #ffffff')
         self.username.setGeometry(610,250,150,25)
 
         # Password field
         self.password = qt.QLineEdit(self)
+        self.password.setText('navigator')
         self.password.setEchoMode(qt.QLineEdit.Password)
         self.password.setStyleSheet('background-color: #ffffff')
         self.password.setGeometry(610,290,150,25)
@@ -77,7 +79,7 @@ class LoginPage(qt.QMainWindow):
     #############################################################
     def Enter(self):
     #############################################################
-        if self.username.text() == '' and self.password.text() == '':
+        if self.username.text() == 'Self-Navigating Bot' and self.password.text() == 'navigator':
             self.wlabel.setHidden(True)
             widget.setCurrentIndex(widget.currentIndex()+1)
             widget.setWindowTitle('Main Menu')
@@ -152,17 +154,26 @@ class SLAM(qt.QWidget):
         self.start.setStyleSheet('background-color: #00ff00')
         self.start.setFixedSize(100,30)
 
+        # stop button
+        self.stop = qt.QPushButton('Stop', self, clicked = lambda: self.stop_())
+        self.stop.setStyleSheet('background-color: #ff0000')
+        self.stop.setFixedSize(100,30)
+        self.stop.hide()
+
         # save button
-        self.save = qt.QPushButton('Save Map', self, clicked = lambda: self.save_())
+        self.save = qt.QPushButton('Save Map', self, clicked = lambda: os.system('rosrun map_server map_saver -f '+rospack.get_path('navigator_gui')+'/maps/mymap'))
         self.save.setStyleSheet('background-color: #0000ff')
         self.save.setFixedSize(100,30)
-        self.save.hide()
+        self.save.setEnabled(False)
 
         # final layout
+        button = qt.QHBoxLayout()
+        button.addWidget(self.start)
+        button.addWidget(self.stop)
+        button.addWidget(self.save)
         layout = qt.QVBoxLayout()
         layout.addWidget(Myviz().getviz())
-        layout.addWidget(self.save, alignment=core.Qt.AlignCenter | core.Qt.AlignVCenter)
-        layout.addWidget(self.start, alignment=core.Qt.AlignCenter | core.Qt.AlignVCenter)
+        layout.addLayout(button)
         Widget = qt.QWidget(self)
         Widget.setFixedSize(w, h)
         Widget.move(core.QPoint(int(w/2),325)-Widget.frameGeometry().center())
@@ -173,24 +184,27 @@ class SLAM(qt.QWidget):
     #############################################################
         self.process = subprocess.Popen(['python', rospack.get_path('navigator_gui')+'/scripts/python_roslaunch.py','0'])
         self.start.hide()
-        self.save.show()
+        self.stop.show()
         self.mode = True
+        self.save.setEnabled(True)
+
         
     #############################################################
-    def save_(self):
+    def stop_(self):
     #############################################################
         try:
             self.process.send_signal(signal.SIGTERM)
             self.process.wait()
             self.process.kill()
             self.process.wait()
-            os.system('rosrun map_server map_saver -f '+rospack.get_path('navigator_gui')+'/maps/mymap')
             self.mode = False
         finally:
             self.process.terminate()
-            self.save.hide()
             self.start.show()
-        
+            self.stop.hide()
+            self.save.setEnabled(False)
+
+
     #############################################################
     def keyPressEvent(self, event):
     #############################################################
@@ -228,17 +242,26 @@ class SMAN(qt.QWidget):
         self.start.setStyleSheet('background-color: #00ff00')
         self.start.setFixedSize(100,30)
 
+        # stop button
+        self.stop = qt.QPushButton('Stop', self, clicked = lambda: self.stop_())
+        self.stop.setStyleSheet('background-color: #ff0000')
+        self.stop.setFixedSize(100,30)
+        self.stop.hide()
+
         # save button
-        self.save = qt.QPushButton('Save Map', self, clicked = lambda: self.save_())
+        self.save = qt.QPushButton('Save Map', self, clicked = lambda: os.system('rosrun map_server map_saver -f '+rospack.get_path('navigator_gui')+'/maps/mymap'))
         self.save.setStyleSheet('background-color: #0000ff')
         self.save.setFixedSize(100,30)
-        self.save.hide()
+        self.save.setEnabled(False)
 
         # final layout
+        button = qt.QHBoxLayout()
+        button.addWidget(self.start)
+        button.addWidget(self.stop)
+        button.addWidget(self.save)
         layout = qt.QVBoxLayout()
         layout.addWidget(Myviz().getviz())
-        layout.addWidget(self.save, alignment=core.Qt.AlignCenter | core.Qt.AlignVCenter)
-        layout.addWidget(self.start, alignment=core.Qt.AlignCenter | core.Qt.AlignVCenter)
+        layout.addLayout(button)
         Widget = qt.QWidget(self)
         Widget.setFixedSize(w, h)
         Widget.move(core.QPoint(int(w/2),325)-Widget.frameGeometry().center())
@@ -249,24 +272,25 @@ class SMAN(qt.QWidget):
     #############################################################
         self.process = subprocess.Popen(['python', rospack.get_path('navigator_gui')+'/scripts/python_roslaunch.py','2'])
         self.start.hide()
-        self.save.show()
+        self.stop.show()
         self.mode = True
+        self.save.setEnabled(True)
         
     #############################################################
-    def save_(self):
+    def stop_(self):
     #############################################################
         try:
             self.process.send_signal(signal.SIGTERM)
             self.process.wait()
             self.process.kill()
             self.process.wait()
-            os.system('rosrun map_server map_saver -f '+rospack.get_path('navigator_gui')+'/maps/mymap')
             self.mode = False
         finally:
             self.process.terminate()
-            self.save.hide()
             self.start.show()
-        
+            self.stop.hide()
+            self.save.setEnabled(False)
+
     #############################################################
     def keyPressEvent(self, event):
     #############################################################
@@ -327,7 +351,7 @@ class AUTO(qt.QWidget):
     #############################################################
     def start_(self):
     #############################################################
-        # self.process = subprocess.Popen(['python', rospack.get_path('navigator_gui')+'/scripts/python_roslaunch.py','1'])
+        self.process = subprocess.Popen(['python', rospack.get_path('navigator_gui')+'/scripts/python_roslaunch.py','1'])
         self.start.hide()
         self.stop.show()
 
@@ -360,6 +384,7 @@ class Myviz():
         self.frame.load( config )
         self.frame.setStatusBar( None )
         self.frame.setMenuBar(None)
+        self.frame.setHideButtonVisibility(False)
     
     #############################################################
     def getviz(self):

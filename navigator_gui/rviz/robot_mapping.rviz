@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /TF1/Frames1
         - /TF1/Tree1
+        - /Image1
         - /Global Map1/Costmap1
         - /Local Map1/Costmap1
       Splitter Ratio: 0.5
@@ -28,7 +29,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: Image
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -125,7 +126,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /object_detection/result
+      Image Topic: /camera/rgb/image_color
       Max Value: 1
       Median window: 5
       Min Value: 0
